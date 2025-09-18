@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Au Clipers</title>
+  <style>
+    :root{
+      --bg:#f4f6fb; --card:#fff; --accent:#2563eb; --danger:#c62828; --muted:#777;
+      --radius:10px;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:Inter,system-ui,Segoe UI,Roboto,Arial;
+      color:#111;
+      background:var(--bg);
+      /* Neymar watermark background */
+      background-image:url('63996-3840x2160-desktop-4k-neymar-background.jpg');
+      background-size:cover;
+      background-position:center;
+      background-attachment:fixed;
+    }
+    body::before{
+      content:"";
+      position:fixed;
+      inset:0;
+      background:rgba(255,255,255,0.7);
+      z-index:-1;
+    }
+    header{display:flex;align-items:center;justify-content:space-between;padding:10px 18px;background:var(--card);box-shadow:0 1px 4px rgba(0,0,0,.06)}
+    .brand{font-weight:700;font-size:18px;color:var(--accent)}
+    .tabs{display:flex;gap:8px}
+    .tabs button{background:transparent;border:none;padding:8px 12px;border-radius:8px;cursor:pointer;font-weight:600}
+    .tabs button.active{background:var(--accent);color:#fff}
+    .controls{display:flex;gap:8px;align-items:center}
+    .search{padding:8px;border-radius:8px;border:1px solid #e6e9ef;min-width:180px}
+    .uploadBtn{background:var(--accent);color:#fff;border:none;padding:8px 12px;border-radius:8px;cursor:pointer}
+    main{padding:18px}
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px}
+    .card{background:var(--card);padding:10px;border-radius:var(--radius);box-shadow:0 6px 14px rgba(15,23,42,.04);display:flex;flex-direction:column}
+    .thumb{width:100%;height:150px;border-radius:8px;object-fit:cover;background:#eee}
+    .titleRow{display:flex;justify-content:space-between;align-items:center;margin-top:10px}
+    .title{font-weight:600;font-size:14px}
+    .btn{padding:6px 10px;border-radius:8px;border:none;cursor:pointer}
+    .btn.link{background:transparent;color:var(--accent);text-decoration:underline;padding:4px}
+    .btn.delete{background:#fee2e2;color:var(--danger);border:1px solid #f8c0c0}
+    .empty{padding:40px;text-align:center;color:var(--muted)}
+    .modal{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.5);visibility:hidden;opacity:0;transition:all .18s}
+    .modal.open{visibility:visible;opacity:1}
+    .dialog{background:var(--card);padding:16px;border-radius:12px;min-width:320px;max-width:92%;box-shadow:0 8px 24px rgba(2,6,23,.2)}
+    .field{margin-bottom:10px;display:flex;flex-direction:column;gap:6px}
+    .field input{padding:8px;border-radius:8px;border:1px solid #e6e9ef}
+    .row{display:flex;gap:8px;justify-content:flex-end}
+    .adminBadge{background:#eef6ff;color:var(--accent);padding:6px 8px;border-radius:8px;font-weight:600}
+  </style>
+</head>
+<body>
+  <header>
+    <div style="display:flex;align-items:center;gap:12px">
+      <div class="brand">Au Clipers</div>
+      <nav class="tabs" aria-label="Main tabs">
+        <button class="tabBtn active" data-tab="home">Home</button>
+        <button class="tabBtn" data-tab="ppf">PPF</button>
+        <button class="tabBtn" data-tab="premium">Premium</button>
+      </nav>
+    </div>
+    <div class="controls">
+      <input id="searchInput" class="search" placeholder="Search by title..." />
+      <button id="uploadBtn" class="uploadBtn">Upload</button>
+      <button id="adminLoginBtn" class="btn">Admin Login</button>
+      <div id="adminStatus" style="display:none"><span class="adminBadge">Admin</span></div>
+    </div>
+  </header>
+
+  <main>
+    <section id="home" class="page">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <h2>Home Gallery</h2>
+        <button id="clearAllBtn" class="btn" style="display:none;background:#fee2e2;color:#991b1b">Clear All</button>
+      </div>
+      <div id="homeGrid" class="grid"></div>
+      <div id="homeEmpty" class="empty" style="display:none">No items yet.</div>
+    </section>
+    <section id="ppf" class="page" style="display:none">
+      <h2>PPF Gallery</h2>
+      <button id="uploadPpfBtn" class="uploadBtn">Upload</button>
+      <div id="ppfGrid" class="grid"></div>
+      <div id="ppfEmpty" class="empty" style="display:none">No items.</div>
+    </section>
+    <section id="premium" class="page" style="display:none">
+      <h2>Premium Gallery</h2>
+      <button id="uploadPremiumBtn" class="uploadBtn">Upload</button>
+      <div id="premiumGrid" class="grid"></div>
+      <div id="premiumEmpty" class="empty" style="display:none">No items.</div>
+    </section>
+  </main>
+
+  <!-- Upload Modal -->
+  <div id="modal" class="modal">
+    <div class="dialog">
+      <h3 id="modalTitle">Upload Image</h3>
+      <div class="field"><label>Title</label><input id="titleField" type="text"></div>
+      <div class="field"><label>Link</label><input id="linkField" type="url"></div>
+      <div class="field"><label>Image</label><input id="fileField" type="file" accept="image/*"></div>
+      <div class="row"><button id="modalCancel" class="btn">Cancel</button><button id="modalSave" class="btn" style="background:var(--accent);color:#fff">Save</button></div>
+    </div>
+  </div>
+
+  <!-- Admin Login Modal -->
+  <div id="adminModal" class="modal">
+    <div class="dialog">
+      <h3>Admin Login</h3>
+      <div class="field"><label>Password</label><input id="adminPassword" type="password"></div>
+      <div class="row"><button id="adminCancel" class="btn">Cancel</button><button id="adminOk" class="btn" style="background:var(--accent);color:#fff">Login</button></div>
+    </div>
+  </div>
+
+  <!-- Subscribe Popup -->
+  <div id="subscribeModal" class="modal open">
+    <div class="dialog">
+      <h3>Subscribe to Au Edits 🎬</h3>
+      <p>Please support us by subscribing to our YouTube channel!</p>
+      <div class="row">
+        <a href="https://youtube.com/@edite_ssarjun112?si=_mfmBKcSNBaLsk-h" target="_blank">
+          <button class="btn" style="background:var(--accent);color:#fff">Subscribe</button>
+        </a>
+        <button id="subscribeClose" class="btn">Close</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+(function(){
+  const ADMIN_PASSWORD = 'seema'; // Admin password
+  const PREMIUM_PASSWORD = 'golden123'; // New premium password
+  const KEYS = {home:'photos_home',ppf:'photos_ppf',premium:'photos_premium'};
+  const $=s=>document.querySelector(s);const $$=s=>document.querySelectorAll(s);
+
+  function read(k){try{let r=localStorage.getItem(k);return r?JSON.parse(r):[]}catch(e){return[]}}
+  function write(k,v){localStorage.setItem(k,JSON.stringify(v))}
+  function uid(){return Date.now().toString(36)}
+
+  function createCard(it,key){
+    const c=document.createElement('div');c.className='card';
+    const img=document.createElement('img');img.className='thumb';img.src=it.image;c.appendChild(img);
+    const row=document.createElement('div');row.className='titleRow';
+    row.innerHTML='<div class="title">'+it.title+'</div>';
+    const del=document.createElement('button');del.textContent='Delete';del.className='btn delete';
+    del.onclick=()=>{
+      if(!adminSignedIn){alert("Only admin can delete. Please login first.");return;}
+      if(confirm("Delete?")){write(key,read(key).filter(x=>x.id!==it.id));renderAll();}
+    };
+    row.appendChild(del);c.appendChild(row);
+    return c;
+  }
+
+  function renderGrid(key,grid,empty,q){
+    let arr=read(key).filter(it=>!q||it.title.toLowerCase().includes(q.toLowerCase()));
+    grid.innerHTML='';arr.forEach(it=>grid.appendChild(createCard(it,key)));
+    empty.style.display=arr.length?'none':'block';
+  }
+  function renderAll(){
+    let q=$('#searchInput').value;
+    renderGrid(KEYS.home,$('#homeGrid'),$('#homeEmpty'),q);
+    renderGrid(KEYS.ppf,$('#ppfGrid'),$('#ppfEmpty'),q);
+    renderGrid(KEYS.premium,$('#premiumGrid'),$('#premiumEmpty'),q);
+  }
+
+  let currentKey=KEYS.home;const modal=$('#modal');
+  $('#uploadBtn').onclick=()=>openModal(KEYS.home);
+  $('#uploadPpfBtn').onclick=()=>openModal(KEYS.ppf);
+  $('#uploadPremiumBtn').onclick=()=>openModal(KEYS.premium);
+  $('#modalCancel').onclick=()=>modal.classList.remove('open');
+  $('#modalSave').onclick=()=>{
+    let t=$('#titleField').value,f=$('#fileField').files[0];
+    if(!t||!f)return;
+    let r=new FileReader();
+    r.onload=e=>{
+      let arr=read(currentKey);
+      arr.unshift({id:uid(),title:t,image:e.target.result});
+      write(currentKey,arr);
+      modal.classList.remove('open');
+      renderAll();
+    };
+    r.readAsDataURL(f)
+  }
+
+  $('#searchInput').oninput=()=>renderAll();
+
+  // Tab switching with Premium password
+  let premiumUnlocked=false;
+  $$('.tabBtn').forEach(b=>{
+    b.onclick=()=>{
+      if(b.dataset.tab==='premium' && !premiumUnlocked){
+        let pass=prompt("Enter Premium Password:");
+        if(pass!==PREMIUM_PASSWORD){alert("Wrong password!");return;}
+        premiumUnlocked=true;
+      }
+      $$('.tabBtn').forEach(x=>x.classList.remove('active'));
+      b.classList.add('active');
+      ['home','ppf','premium'].forEach(id=>$('#'+id).style.display=(b.dataset.tab===id?'block':'none'));
+    };
+  });
+
+  // Admin login
+  let adminSignedIn=false;
+  const adminModal=$('#adminModal');
+  $('#adminLoginBtn').onclick=()=>{adminModal.classList.add('open')};
+  $('#adminCancel').onclick=()=>adminModal.classList.remove('open');
+  $('#adminOk').onclick=()=>{
+    if($('#adminPassword').value===ADMIN_PASSWORD){
+      adminSignedIn=true;
+      $('#adminStatus').style.display='inline-block';
+      $('#clearAllBtn').style.display='inline-block';
+      adminModal.classList.remove('open');
+      alert("Admin logged in")
+    } else alert("Wrong password")
+  }
+
+  $('#clearAllBtn').onclick=()=>{
+    if(confirm("Delete ALL images?")){
+      Object.values(KEYS).forEach(k=>write(k,[]));
+      renderAll();
+    }
+  }
+
+  // Subscribe popup close
+  $('#subscribeClose').onclick=()=>$('#subscribeModal').classList.remove('open');
+
+  function openModal(k){modal.classList.add('open');currentKey=k}
+
+  renderAll()
+})();
+</script>
+</body>
+</html>
